@@ -1,38 +1,37 @@
-#!/usr/bin/env python2.4
-# Эта программа показыает работу декоратора, который производит оптимизацию хвостового вызова. Он делает это, вызывая исключение, если оно является его прародителем, и перехватывает исключения, чтобы вызвать стек.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-import sys
 import timeit
 
 
-class TailRecurseException(Exception):
-    def __init__(self, args, kwargs):
-        self.args = args
-        self.kwargs = kwargs
+class recursion(object):
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        result = self.func(*args, **kwargs)
+        while callable(result): result = result()
+        return result
+
+    def call(self, *args, **kwargs):
+        return lambda: self.func(*args, **kwargs)
 
 
-def tail_call_optimized(g):
+@recursion
+def factorial_opt(n, acc=1):
+    if n == 0:
+        return acc
+    return factorial(n-1, n*acc)
+    
 
-    def func(*args, **kwargs):
-        f = sys._getframe()
-        if f.f_back and f.f_back.f_back and f.f_back.f_back.f_code == f.f_code:
-            raise TailRecurseException(args, kwargs)
-        else:
-            while 1:
-                try:
-                    return g(*args, **kwargs)
-                except TailRecurseException as e:
-                    args = e.args
-                    kwargs = e.kwargs
-    func.__doc__ = g.__doc__
-    return func
-
-
-@tail_call_optimized
 def factorial(n, acc=1):
     if n == 0:
         return acc
     return factorial(n-1, n*acc)
 
-
-print(f'{timeit.timeit(lambda: factorial(1000, 1), number=10000)}\n')
+if __name__ == '__main__':
+    print("Время работы кода с использованием интроспекции")
+    print(f'{timeit.timeit(lambda: factorial_opt(250), number=10000)}\n')
+    print("Время работы кода без использования интроспекции")
+    print(timeit.timeit(lambda: factorial(250), number=10000))
+    
